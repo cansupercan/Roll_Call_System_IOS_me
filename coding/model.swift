@@ -9,12 +9,13 @@ import Foundation
 import RealmSwift
 
 // 使用者資訊資料表
-class user: Object {
+class User: Object {
     @objc dynamic var userId: String = ""
     @objc dynamic var Name: String = ""
     //@objc dynamic var end_at: Date? = nil
     @objc dynamic var createdAt = Date()
     @objc dynamic var active = true
+    @objc dynamic var lastCheckInTime: Date? = nil
     
     convenience init(userId: String, name: String) {
         self.init()

@@ -15,7 +15,7 @@ class MainViewController: UIViewController {
     @IBOutlet weak var tbvselect: UITableView!
     
     // 存儲所有使用者的陣列
-    private var users: Results<user>?
+    private var users: Results<User>?
     
     // 定時器用於更新即時時間
     private var timer: Timer?
@@ -159,13 +159,13 @@ class MainViewController: UIViewController {
         let realm = try! Realm()
         
         // 檢查使用者 ID 是否已存在
-        if let _ = realm.objects(user.self).filter("userId == %@", userId).first {
+        if let _ = realm.objects(User.self).filter("userId == %@", userId).first {
             showErrorAlert(message: "使用者 ID 已存在")
             return
         }
         
         // 建立新使用者
-        let newUser = user(userId: userId, name: name)
+        let newUser = User(userId: userId, name: name)
         
         do {
             try realm.write {
@@ -221,7 +221,7 @@ class MainViewController: UIViewController {
     // 載入使用者數據
     private func loadUsers() {
         let realm = try! Realm()
-        users = realm.objects(user.self).sorted(byKeyPath: "createdAt", ascending: false)
+        users = realm.objects(User.self).sorted(byKeyPath: "createdAt", ascending: false)
         tbvselect.reloadData()
     }
     
@@ -273,7 +273,7 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     // 顯示簽到確認對話框
-    private func showCheckInConfirmation(for user: user) {
+    private func showCheckInConfirmation(for user: User) {
         let alertController = UIAlertController(
             title: "簽到確認",
             message: "確認為 \(user.Name) 進行簽到嗎？",
@@ -306,15 +306,37 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     // 執行簽到並寫入資料庫
-    private func performCheckIn(for user: user, note: String?) {
+    private func performCheckIn(for user: User, note: String?) {
         let realm = try! Realm()
+        
+        // 檢查上次簽到時間，判斷是否允許再次簽到
+        if let lastCheckInTime = user.lastCheckInTime {
+            // 計算上次簽到時間與當前時間的時間差（小時）
+            let timeInterval = Date().timeIntervalSince(lastCheckInTime) / 3600
+            
+            // 如果時間差小於 12 小時，則不允許簽到
+            if timeInterval < 12 {
+                // 計算還需等待的時間
+                let hoursLeft = 12 - timeInterval
+                let minutesLeft = Int((hoursLeft - Double(Int(hoursLeft))) * 60)
+                
+                let message = String(format: "距離上次簽到時間不足 12 小時，還需等待 %d 小時 %d 分鐘", Int(hoursLeft), minutesLeft)
+                showErrorAlert(message: message)
+                return
+            }
+        }
         
         // 建立新的簽到記錄
         let checkInRecord = CheckInRecord(userId: user.userId, note: note)
         
         do {
             try realm.write {
+                // 添加簽到記錄
                 realm.add(checkInRecord)
+                
+                // 更新使用者的最後簽到時間
+                let userToUpdate = realm.objects(User.self).filter("userId == %@", user.userId).first
+                userToUpdate?.lastCheckInTime = checkInRecord.checkInTime
             }
             
             // 顯示簽到成功訊息

@@ -13,7 +13,7 @@ class listViewController: UIViewController {
     @IBOutlet weak var tbvlist: UITableView!
     
     // 存儲所有使用者的陣列
-    private var users: Results<user>?
+    private var users: Results<User>?
     
     // 存儲所有簽到記錄的陣列
     private var checkInRecords: Results<CheckInRecord>?
@@ -107,7 +107,7 @@ class listViewController: UIViewController {
     // 載入使用者數據
     private func loadUsers() {
         let realm = try! Realm()
-        users = realm.objects(user.self).sorted(byKeyPath: "createdAt", ascending: false)
+        users = realm.objects(User.self).sorted(byKeyPath: "createdAt", ascending: false)
         tbvlist.reloadData()
     }
     
@@ -172,7 +172,7 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
             if let record = checkInRecords?[indexPath.row] {
                 // 嘗試獲取用戶名
                 let realm = try! Realm()
-                let userObj = realm.objects(user.self).filter("userId == %@", record.userId).first
+                let userObj = realm.objects(User.self).filter("userId == %@", record.userId).first
                 let userName = userObj?.Name ?? "未知用戶"
                 
                 cell.textLabel?.text = "\(userName) - 簽到時間: \(formatDate(record.checkInTime))"
@@ -225,7 +225,7 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     // 顯示用戶詳細資訊
-    private func showUserDetails(user: user) {
+    private func showUserDetails(user: User) {
         let alertController = UIAlertController(
             title: "用戶詳細資訊",
             message: "ID: \(user.userId)\n姓名: \(user.Name)\n創建時間: \(formatDate(user.createdAt))",
@@ -243,7 +243,7 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
     private func showRecordDetails(record: CheckInRecord) {
         // 嘗試獲取用戶名
         let realm = try! Realm()
-        let userObj = realm.objects(user.self).filter("userId == %@", record.userId).first
+        let userObj = realm.objects(User.self).filter("userId == %@", record.userId).first
         let userName = userObj?.Name ?? "未知用戶"
         
         let alertController = UIAlertController(
@@ -316,7 +316,7 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
         
         // 嘗試獲取用戶名
         let realm = try! Realm()
-        let userObj = realm.objects(user.self).filter("userId == %@", recordToDelete.userId).first
+        let userObj = realm.objects(User.self).filter("userId == %@", recordToDelete.userId).first
         let userName = userObj?.Name ?? "未知用戶"
         
         // 顯示確認刪除的警告框
