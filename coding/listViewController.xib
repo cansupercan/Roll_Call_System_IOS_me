@@ -10,6 +10,7 @@
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="listViewController" customModule="coding" customModuleProvider="target">
             <connections>
+                <outlet property="pkvs" destination="Eh9-ol-gtx" id="f7E-a1-XX9"/>
                 <outlet property="tbvlist" destination="2yc-Xc-bdF" id="6Al-yW-6YV"/>
                 <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
             </connections>
@@ -20,17 +21,24 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="-1" estimatedSectionHeaderHeight="-1" sectionFooterHeight="-1" estimatedSectionFooterHeight="-1" translatesAutoresizingMaskIntoConstraints="NO" id="2yc-Xc-bdF">
-                    <rect key="frame" x="0.0" y="128.33333333333331" width="393" height="681.66666666666674"/>
+                    <rect key="frame" x="0.0" y="170.66666666666669" width="393" height="613.33333333333326"/>
                     <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                 </tableView>
+                <pickerView contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Eh9-ol-gtx">
+                    <rect key="frame" x="0.0" y="4" width="393" height="167"/>
+                </pickerView>
             </subviews>
             <viewLayoutGuide key="safeArea" id="fnl-2z-Ty3"/>
             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
             <constraints>
+                <constraint firstItem="2yc-Xc-bdF" firstAttribute="bottom" secondItem="fnl-2z-Ty3" secondAttribute="bottom" id="Cai-PJ-o2E"/>
                 <constraint firstItem="2yc-Xc-bdF" firstAttribute="width" secondItem="i5M-Pr-FkT" secondAttribute="width" id="HL3-lI-yBK"/>
-                <constraint firstItem="2yc-Xc-bdF" firstAttribute="centerY" secondItem="fnl-2z-Ty3" secondAttribute="centerY" multiplier="1.04" id="QeO-pZ-OiF"/>
+                <constraint firstItem="Eh9-ol-gtx" firstAttribute="centerX" secondItem="2yc-Xc-bdF" secondAttribute="centerX" id="RrD-pn-p0g"/>
+                <constraint firstItem="Eh9-ol-gtx" firstAttribute="width" secondItem="2yc-Xc-bdF" secondAttribute="width" id="crL-Cv-Bix"/>
                 <constraint firstItem="2yc-Xc-bdF" firstAttribute="centerX" secondItem="fnl-2z-Ty3" secondAttribute="centerX" id="gyi-Wu-PwG"/>
-                <constraint firstItem="2yc-Xc-bdF" firstAttribute="height" secondItem="i5M-Pr-FkT" secondAttribute="height" multiplier="0.8" id="oB3-mj-eTN"/>
+                <constraint firstItem="Eh9-ol-gtx" firstAttribute="height" secondItem="fnl-2z-Ty3" secondAttribute="height" multiplier="0.25" id="h4l-et-ZgO"/>
+                <constraint firstItem="2yc-Xc-bdF" firstAttribute="height" secondItem="i5M-Pr-FkT" secondAttribute="height" multiplier="0.72" id="oB3-mj-eTN"/>
+                <constraint firstItem="2yc-Xc-bdF" firstAttribute="top" secondItem="Eh9-ol-gtx" secondAttribute="bottom" id="q5G-2q-UjJ"/>
             </constraints>
             <point key="canvasLocation" x="131" y="-11"/>
         </view>

@@ -12,11 +12,19 @@ class listViewController: UIViewController {
 
     @IBOutlet weak var tbvlist: UITableView!
     
+    @IBOutlet weak var pkvs: UIPickerView!
+    
     // 存儲所有使用者的陣列
     private var users: Results<User>?
     
     // 存儲所有簽到記錄的陣列
     private var checkInRecords: Results<CheckInRecord>?
+    
+    // 篩選後的簽到記錄
+    private var filteredCheckInRecords: Results<CheckInRecord>?
+    
+    // 用戶數據陣列 (用於 PickerView)
+    private var userPickerData: [String] = ["所有人"]
     
     // 定義顯示模式
     enum DisplayMode {
@@ -39,8 +47,14 @@ class listViewController: UIViewController {
         // 設置 TableView
         setupTableView()
         
+        // 設置 PickerView
+        setupPickerView()
+        
         // 載入使用者數據
         loadUsers()
+        
+        // 根據當前模式設置 PickerView 的可見性
+        updatePickerViewVisibility()
     }
     
     // 設置導航欄
@@ -85,8 +99,17 @@ class listViewController: UIViewController {
         if currentDisplayMode == .users {
             loadUsers()
         } else {
+            // 加載用戶數據到 PickerView
+            loadUserPickerData()
+            // 載入所有簽到記錄（預設顯示所有人的記錄）
             loadCheckInRecords()
+            // 選擇「所有人」選項
+            pkvs.selectRow(0, inComponent: 0, animated: false)
+            filterCheckInRecords(forUserIndex: 0)
         }
+        
+        // 更新 PickerView 的可見性
+        updatePickerViewVisibility()
         
         // 更新導航欄標題
         title = (currentDisplayMode == .users) ? "人員列表" : "簽到記錄"
@@ -104,6 +127,16 @@ class listViewController: UIViewController {
         tbvlist.rowHeight = 60
     }
     
+    // 設置 PickerView
+    private func setupPickerView() {
+        // 設置代理和數據源
+        pkvs.delegate = self
+        pkvs.dataSource = self
+        
+        // 初始選擇「所有人」選項
+        pkvs.selectRow(0, inComponent: 0, animated: false)
+    }
+    
     // 載入使用者數據
     private func loadUsers() {
         let realm = try! Realm()
@@ -115,6 +148,39 @@ class listViewController: UIViewController {
     private func loadCheckInRecords() {
         let realm = try! Realm()
         checkInRecords = realm.objects(CheckInRecord.self).sorted(byKeyPath: "checkInTime", ascending: false)
+        tbvlist.reloadData()
+    }
+    
+    // 載入用戶數據到 PickerView
+    private func loadUserPickerData() {
+        userPickerData.removeAll()
+        userPickerData.append("所有人") // 添加「所有人」選項
+        
+        if let users = users {
+            for user in users {
+                userPickerData.append(user.Name)
+            }
+        }
+        
+        // 重新載入 PickerView 數據
+        pkvs.reloadAllComponents()
+    }
+    
+    // 根據選中的用戶篩選簽到記錄
+    private func filterCheckInRecords(forUserIndex index: Int) {
+        guard let users = users else { return }
+        
+        if index == 0 {
+            // 如果選擇的是「所有人」，則顯示所有簽到記錄
+            filteredCheckInRecords = checkInRecords
+        } else {
+            // 否則，根據選中的用戶篩選簽到記錄
+            let selectedUser = users[index - 1] // 減去 1 是因為索引 0 是「所有人」
+            let realm = try! Realm()
+            filteredCheckInRecords = realm.objects(CheckInRecord.self).filter("userId == %@", selectedUser.userId).sorted(byKeyPath: "checkInTime", ascending: false)
+        }
+        
+        // 重新載入 TableView 數據
         tbvlist.reloadData()
     }
     
@@ -135,6 +201,11 @@ class listViewController: UIViewController {
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter.string(from: date)
     }
+    
+    // 根據當前模式設置 PickerView 的可見性
+    private func updatePickerViewVisibility() {
+        pkvs.isHidden = (currentDisplayMode == .users)
+    }
 }
 
 // MARK: - UITableViewDataSource, UITableViewDelegate
@@ -151,7 +222,7 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
         case .users:
             return users?.count ?? 0
         case .checkInRecords:
-            return checkInRecords?.count ?? 0
+            return filteredCheckInRecords?.count ?? 0
         }
     }
     
@@ -169,7 +240,7 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
             }
         case .checkInRecords:
             // 獲取對應的簽到記錄
-            if let record = checkInRecords?[indexPath.row] {
+            if let record = filteredCheckInRecords?[indexPath.row] {
                 // 嘗試獲取用戶名
                 let realm = try! Realm()
                 let userObj = realm.objects(User.self).filter("userId == %@", record.userId).first
@@ -198,7 +269,7 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
             
         case .checkInRecords:
             // 獲取選中的簽到記錄
-            guard let selectedRecord = checkInRecords?[indexPath.row] else { return }
+            guard let selectedRecord = filteredCheckInRecords?[indexPath.row] else { return }
             
             // 顯示記錄詳細資訊
             showRecordDetails(record: selectedRecord)
@@ -366,5 +437,30 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
         let okAction = UIAlertAction(title: "確定", style: .default)
         alertController.addAction(okAction)
         present(alertController, animated: true)
+    }
+}
+
+// MARK: - UIPickerViewDataSource, UIPickerViewDelegate
+extension listViewController: UIPickerViewDataSource, UIPickerViewDelegate {
+    
+    // 返回 PickerView 有幾個區域
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 1
+    }
+    
+    // 返回每個區域的行數
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return userPickerData.count // 使用 userPickerData 而不是直接使用 users
+    }
+    
+    // 返回每一行的內容
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        return userPickerData[row] // 從 userPickerData 取得標題
+    }
+    
+    // 行被選中時的處理
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        // 使用 filterCheckInRecords 方法根據選擇的索引篩選記錄
+        filterCheckInRecords(forUserIndex: row)
     }
 }
