@@ -251,8 +251,27 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
         // 獲取對應的使用者資料
         if let currentUser = users?[indexPath.row] {
             cell.textLabel?.text = "\(currentUser.Name) (\(currentUser.userId))"
+            
+            // 檢查用戶是否在今天已經簽到
+            if let lastCheckInTime = currentUser.lastCheckInTime {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: Date())
+                let checkInDate = calendar.startOfDay(for: lastCheckInTime)
+                
+                // 如果是今天簽到的，顯示打勾圖示
+                if calendar.isDate(today, inSameDayAs: checkInDate) {
+                    // 使用系統自帶的打勾圖標
+                    cell.accessoryType = .checkmark
+                    cell.tintColor = .systemGreen // 使用綠色
+                } else {
+                    cell.accessoryType = .none
+                }
+            } else {
+                cell.accessoryType = .none
+            }
         } else {
             cell.textLabel?.text = "未知使用者"
+            cell.accessoryType = .none
         }
         
         return cell
@@ -344,6 +363,7 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
         } catch {
             showErrorAlert(message: "簽到失敗：\(error.localizedDescription)")
         }
+        tbvselect.reloadData()
     }
     
     // 格式化日期
