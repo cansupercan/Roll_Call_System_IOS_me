@@ -10,12 +10,14 @@ import RealmSwift
 
 // 使用者資訊資料表
 class User: Object {
-    @objc dynamic var userId: String = ""
-    @objc dynamic var Name: String = ""
-    //@objc dynamic var end_at: Date? = nil
-    @objc dynamic var createdAt = Date()
-    @objc dynamic var active = true
-    @objc dynamic var lastCheckInTime: Date? = nil
+    @Persisted(primaryKey: true) var userId: String = ""
+    @Persisted var Name: String = ""
+    @Persisted var createdAt = Date()
+    @Persisted var active = true
+    @Persisted var lastCheckInTime: Date? = nil
+    
+    // 關聯到此用戶的所有簽到記錄
+    @Persisted var checkInRecords: List<CheckInRecord>
     
     convenience init(userId: String, name: String) {
         self.init()
@@ -23,22 +25,21 @@ class User: Object {
         self.Name = name
         self.active = true
     }
-    
-  
 }
 
 // 簽到記錄資料表
 class CheckInRecord: Object {
-    @objc dynamic var id = UUID().uuidString
-    @objc dynamic var checkInTime = Date()
-    @objc dynamic var note: String? = nil
-    @objc dynamic var userId: String = ""
+    @Persisted(primaryKey: true) var id = UUID().uuidString
+    @Persisted var checkInTime = Date()
+    @Persisted var note: String? = nil
     
-    convenience init(userId: String, note: String? = nil) {
+    // 建立與用戶的關聯
+    @Persisted(originProperty: "checkInRecords") var user: LinkingObjects<User>
+    
+    convenience init(user: User, note: String? = nil) {
         self.init()
-        self.userId = userId
+        // 將記錄添加到用戶的記錄列表中
+        user.checkInRecords.append(self)
         self.note = note
     }
-    
-   
 }

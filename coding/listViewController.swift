@@ -168,16 +168,18 @@ class listViewController: UIViewController {
     
     // 根據選中的用戶篩選簽到記錄
     private func filterCheckInRecords(forUserIndex index: Int) {
-        guard let users = users else { return }
+        let realm = try! Realm()
         
         if index == 0 {
             // 如果選擇的是「所有人」，則顯示所有簽到記錄
-            filteredCheckInRecords = checkInRecords
+            filteredCheckInRecords = realm.objects(CheckInRecord.self).sorted(byKeyPath: "checkInTime", ascending: false)
         } else {
             // 否則，根據選中的用戶篩選簽到記錄
+            guard let users = users else { return }
             let selectedUser = users[index - 1] // 減去 1 是因為索引 0 是「所有人」
-            let realm = try! Realm()
-            filteredCheckInRecords = realm.objects(CheckInRecord.self).filter("userId == %@", selectedUser.userId).sorted(byKeyPath: "checkInTime", ascending: false)
+            
+            // 直接使用關聯查詢，獲取特定使用者的所有簽到記錄
+            filteredCheckInRecords = selectedUser.checkInRecords.sorted(byKeyPath: "checkInTime", ascending: false)
         }
         
         // 重新載入 TableView 數據
@@ -241,12 +243,12 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
         case .checkInRecords:
             // 獲取對應的簽到記錄
             if let record = filteredCheckInRecords?[indexPath.row] {
-                // 嘗試獲取用戶名
-                let realm = try! Realm()
-                let userObj = realm.objects(User.self).filter("userId == %@", record.userId).first
-                let userName = userObj?.Name ?? "未知用戶"
-                
-                cell.textLabel?.text = "\(userName) - 簽到時間: \(formatDate(record.checkInTime))"
+                // 使用關聯式模型獲取使用者資訊
+                if let user = record.user.first {
+                    cell.textLabel?.text = "\(user.Name) - 簽到時間: \(formatDate(record.checkInTime))"
+                } else {
+                    cell.textLabel?.text = "未知用戶 - 簽到時間: \(formatDate(record.checkInTime))"
+                }
             } else {
                 cell.textLabel?.text = "未知記錄"
             }
@@ -312,14 +314,21 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
     
     // 顯示記錄詳細資訊
     private func showRecordDetails(record: CheckInRecord) {
-        // 嘗試獲取用戶名
-        let realm = try! Realm()
-        let userObj = realm.objects(User.self).filter("userId == %@", record.userId).first
-        let userName = userObj?.Name ?? "未知用戶"
+        // 使用關聯式模型獲取使用者資訊
+        let userName: String
+        let userId: String
+        
+        if let user = record.user.first {
+            userName = user.Name
+            userId = user.userId
+        } else {
+            userName = "未知用戶"
+            userId = "未知"
+        }
         
         let alertController = UIAlertController(
             title: "簽到記錄詳細資訊",
-            message: "用戶: \(userName)\n用戶ID: \(record.userId)\n簽到時間: \(formatDate(record.checkInTime))\n備註: \(record.note ?? "無")",
+            message: "用戶: \(userName)\n用戶ID: \(userId)\n簽到時間: \(formatDate(record.checkInTime))\n備註: \(record.note ?? "無")",
             preferredStyle: .alert
         )
         
@@ -387,7 +396,7 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
         
         // 嘗試獲取用戶名
         let realm = try! Realm()
-        let userObj = realm.objects(User.self).filter("userId == %@", recordToDelete.userId).first
+        let userObj = realm.objects(User.self).filter("id == %@", recordToDelete.id).first
         let userName = userObj?.Name ?? "未知用戶"
         
         // 顯示確認刪除的警告框

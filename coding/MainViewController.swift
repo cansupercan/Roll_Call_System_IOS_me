@@ -174,7 +174,7 @@ class MainViewController: UIViewController {
             showSuccessAlert(message: "使用者新增成功")
             
             // 重新加載表格
-            tbvselect.reloadData()
+            loadUsers()
         } catch {
             showErrorAlert(message: "儲存失敗: \(error.localizedDescription)")
         }
@@ -345,25 +345,25 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
             }
         }
         
-        // 建立新的簽到記錄
-        let checkInRecord = CheckInRecord(userId: user.userId, note: note)
-        
         do {
             try realm.write {
-                // 添加簽到記錄
+                // 使用新的關聯式資料庫模型建立簽到記錄
+                // 這會自動將記錄添加到使用者的 checkInRecords 列表中
+                let checkInRecord = CheckInRecord(user: user, note: note)
                 realm.add(checkInRecord)
                 
                 // 更新使用者的最後簽到時間
-                let userToUpdate = realm.objects(User.self).filter("userId == %@", user.userId).first
-                userToUpdate?.lastCheckInTime = checkInRecord.checkInTime
+                user.lastCheckInTime = checkInRecord.checkInTime
             }
             
             // 顯示簽到成功訊息
-            showSuccessAlert(message: "\(user.Name) 簽到成功！時間：\(formatDate(checkInRecord.checkInTime))")
+            showSuccessAlert(message: "\(user.Name) 簽到成功！時間：\(formatDate(Date()))")
+            
+            // 重新載入表格以顯示更新後的簽到狀態
+            tbvselect.reloadData()
         } catch {
             showErrorAlert(message: "簽到失敗：\(error.localizedDescription)")
         }
-        tbvselect.reloadData()
     }
     
     // 格式化日期
