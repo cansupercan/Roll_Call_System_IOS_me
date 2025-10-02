@@ -236,9 +236,23 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
         case .users:
             // 獲取對應的使用者資料
             if let currentUser = users?[indexPath.row] {
-                cell.textLabel?.text = "\(currentUser.Name) (\(currentUser.userId))"
+                // 設置基本文字
+                let statusEmoji = currentUser.active ? "🟢" : "🔴"
+                let statusText = currentUser.active ? "活動中" : "已停用"
+                cell.textLabel?.text = "\(statusEmoji) \(currentUser.Name) (\(currentUser.userId)) - \(statusText)"
+                
+                // 設置文字顏色，根據活動狀態
+                cell.textLabel?.textColor = currentUser.active ? .black : .gray
+                
+                // 設置背景色，讓區分更明顯
+                cell.backgroundColor = currentUser.active ? .white : UIColor(white: 0.95, alpha: 1.0)
+                
+                // 添加詳細文字
+                cell.detailTextLabel?.text = currentUser.active ? "可簽到" : "無法簽到"
             } else {
                 cell.textLabel?.text = "未知使用者"
+                cell.textLabel?.textColor = .black
+                cell.backgroundColor = .white
             }
         case .checkInRecords:
             // 獲取對應的簽到記錄
@@ -246,11 +260,15 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
                 // 使用關聯式模型獲取使用者資訊
                 if let user = record.user.first {
                     cell.textLabel?.text = "\(user.Name) - 簽到時間: \(formatDate(record.checkInTime))"
+                    cell.textLabel?.textColor = .black
                 } else {
                     cell.textLabel?.text = "未知用戶 - 簽到時間: \(formatDate(record.checkInTime))"
+                    cell.textLabel?.textColor = .gray
                 }
+                cell.backgroundColor = .white
             } else {
                 cell.textLabel?.text = "未知記錄"
+                cell.backgroundColor = .white
             }
         }
         
@@ -278,22 +296,65 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
         }
     }
     
-    // 支援左滑刪除操作
-    func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        return true // 允許所有行可編輯（左滑）
+    // 定義左滑操作
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        switch currentDisplayMode {
+        case .users:
+            // 獲取選中的使用者
+            guard let user = users?[indexPath.row] else { return nil }
+            
+            // 創建刪除操作
+            let deleteAction = UIContextualAction(style: .destructive, title: "刪除") { [weak self] (_, _, completionHandler) in
+                self?.deleteUser(at: indexPath)
+                completionHandler(true)
+            }
+            deleteAction.backgroundColor = .systemRed
+            
+            // 創建編輯活動狀態的操作
+            let toggleActiveTitle = user.active ? "停用" : "啟用"
+            let toggleActiveAction = UIContextualAction(style: .normal, title: toggleActiveTitle) { [weak self] (_, _, completionHandler) in
+                self?.toggleUserActiveStatus(user)
+                completionHandler(true)
+            }
+            toggleActiveAction.backgroundColor = user.active ? .systemOrange : .systemGreen
+            
+            // 創建操作配置
+            let configuration = UISwipeActionsConfiguration(actions: [deleteAction, toggleActiveAction])
+            configuration.performsFirstActionWithFullSwipe = false
+            return configuration
+            
+        case .checkInRecords:
+            // 對簽到記錄只提供刪除操作
+            let deleteAction = UIContextualAction(style: .destructive, title: "刪除") { [weak self] (_, _, completionHandler) in
+                self?.deleteCheckInRecord(at: indexPath)
+                completionHandler(true)
+            }
+            deleteAction.backgroundColor = .systemRed
+            
+            let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
+            configuration.performsFirstActionWithFullSwipe = false
+            return configuration
+        }
     }
     
-    // 定義左滑操作
-    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            switch currentDisplayMode {
-            case .users:
-                // 刪除用戶
-                deleteUser(at: indexPath)
-            case .checkInRecords:
-                // 刪除簽到記錄
-                deleteCheckInRecord(at: indexPath)
+    // 切換用戶活動狀態
+    private func toggleUserActiveStatus(_ user: User) {
+        let realm = try! Realm()
+        
+        do {
+            try realm.write {
+                // 切換活動狀態
+                user.active = !user.active
             }
+            
+            // 顯示成功訊息
+            let statusMessage = user.active ? "已啟用" : "已停用"
+            showSuccessAlert(message: "用戶 \(user.Name) \(statusMessage)")
+            
+            // 重新加載數據
+            loadUsers()
+        } catch {
+            showErrorAlert(message: "更新狀態失敗：\(error.localizedDescription)")
         }
     }
     

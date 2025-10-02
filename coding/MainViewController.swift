@@ -221,7 +221,7 @@ class MainViewController: UIViewController {
     // 載入使用者數據
     private func loadUsers() {
         let realm = try! Realm()
-        users = realm.objects(User.self).sorted(byKeyPath: "createdAt", ascending: false)
+        users = realm.objects(User.self).filter("active == true").sorted(byKeyPath: "createdAt", ascending: false)
         tbvselect.reloadData()
     }
     
