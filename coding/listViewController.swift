@@ -33,7 +33,7 @@ class listViewController: UIViewController {
     }
     
     // 當前顯示模式
-    private var currentDisplayMode: DisplayMode = .users
+    private var currentDisplayMode: DisplayMode = .checkInRecords
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -50,8 +50,17 @@ class listViewController: UIViewController {
         // 設置 PickerView
         setupPickerView()
         
-        // 載入使用者數據
+        // 載入使用者數據 (需要先載入使用者資料給 PickerView 使用)
         loadUsers()
+        
+        // 載入用戶數據到 PickerView
+        loadUserPickerData()
+        
+        // 載入簽到記錄
+        loadCheckInRecords()
+        
+        // 篩選顯示所有人的簽到記錄
+        filterCheckInRecords(forUserIndex: 0)
         
         // 根據當前模式設置 PickerView 的可見性
         updatePickerViewVisibility()
@@ -59,7 +68,7 @@ class listViewController: UIViewController {
     
     // 設置導航欄
     private func setupNavigationBar() {
-        title = "人員列表"
+        title = "簽到記錄"
         
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -77,7 +86,7 @@ class listViewController: UIViewController {
     // 設置切換顯示模式按鈕
     private func setupSwitchModeButton() {
         let switchButton = UIBarButtonItem(
-            title: "切換到簽到記錄",
+            title: "切換到人員列表",
             style: .plain,
             target: self,
             action: #selector(switchModeButtonTapped)

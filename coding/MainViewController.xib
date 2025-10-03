@@ -21,7 +21,7 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="YAC-ph-mM1">
-                    <rect key="frame" x="62" y="104.5" width="290" height="54.5"/>
+                    <rect key="frame" x="0.0" y="104.5" width="414" height="54.5"/>
                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                     <nil key="textColor"/>
                     <nil key="highlightedColor"/>
@@ -36,7 +36,7 @@
             <constraints>
                 <constraint firstItem="5Bp-PV-UDx" firstAttribute="top" secondItem="YAC-ph-mM1" secondAttribute="bottom" constant="58.5" id="AO9-Ex-Ebj"/>
                 <constraint firstItem="5Bp-PV-UDx" firstAttribute="centerX" secondItem="fnl-2z-Ty3" secondAttribute="centerX" id="F24-bs-2LA"/>
-                <constraint firstItem="YAC-ph-mM1" firstAttribute="width" secondItem="5Bp-PV-UDx" secondAttribute="width" multiplier="0.700483" id="NHH-VU-KEJ"/>
+                <constraint firstItem="YAC-ph-mM1" firstAttribute="width" secondItem="5Bp-PV-UDx" secondAttribute="width" id="NHH-VU-KEJ"/>
                 <constraint firstItem="5Bp-PV-UDx" firstAttribute="width" secondItem="i5M-Pr-FkT" secondAttribute="width" id="Rnq-Io-Grf"/>
                 <constraint firstItem="YAC-ph-mM1" firstAttribute="centerX" secondItem="5Bp-PV-UDx" secondAttribute="centerX" id="Tjd-rS-hsI"/>
                 <constraint firstItem="5Bp-PV-UDx" firstAttribute="centerY" secondItem="fnl-2z-Ty3" secondAttribute="centerY" multiplier="1.15" id="pwb-KS-gjr"/>
