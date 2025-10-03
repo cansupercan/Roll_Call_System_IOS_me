@@ -20,6 +20,9 @@ class MainViewController: UIViewController {
     // 定時器用於更新即時時間
     private var timer: Timer?
     
+    // 添加一個標誌來記錄定時器狀態
+    private var timerWasRunning = false
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -44,7 +47,6 @@ class MainViewController: UIViewController {
         // 啟動定時器來更新時間
         startTimeUpdater()
     }
-    
     // 設置時間顯示標籤
     private func setupTimeLabel() {
         lbtitle.textAlignment = .center
@@ -71,9 +73,22 @@ class MainViewController: UIViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        // 停止定時器
+        // 記錄定時器狀態並停止定時器
+        timerWasRunning = timer != nil
         timer?.invalidate()
         timer = nil
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        // 如果定時器之前正在運行，則重新啟動
+        if timerWasRunning || timer == nil {
+            startTimeUpdater()
+        }
+        
+        // 無論如何都更新一次時間，確保顯示最新時間
+        updateTimeLabel()
     }
     
     // 設置淡藍色導航欄
@@ -228,6 +243,7 @@ class MainViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadUsers() // 每次視圖出現時重新加載數據
+        updateTimeLabel() // 初始化顯示
     }
 }
 
