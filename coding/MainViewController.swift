@@ -14,6 +14,9 @@ class MainViewController: UIViewController {
     
     @IBOutlet weak var tbvselect: UITableView!
     
+    @IBOutlet weak var btnOutDay: UIButton!
+    
+    @IBOutlet weak var btnoutpeople: UIButton!
     // 存儲所有使用者的陣列
     private var users: Results<User>?
     
@@ -43,6 +46,9 @@ class MainViewController: UIViewController {
         
         // 設置時間顯示標籤
         setupTimeLabel()
+        
+        // 設置匯出按鈕
+        setupExportButtons()
         
         // 啟動定時器來更新時間
         startTimeUpdater()
@@ -387,5 +393,165 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter.string(from: date)
+    }
+    
+    // 設置匯出按鈕
+    private func setupExportButtons() {
+        // 設置人員匯出按鈕
+        btnoutpeople.setTitle("匯出人員資料", for: .normal)
+        btnoutpeople.backgroundColor = UIColor(red: 173/255, green: 216/255, blue: 230/255, alpha: 1.0) // 淡藍色
+        btnoutpeople.layer.cornerRadius = 5
+        btnoutpeople.addTarget(self, action: #selector(exportPeopleButtonTapped), for: .touchUpInside)
+        
+        // 設置簽到記錄匯出按鈕
+        btnOutDay.setTitle("匯出簽到記錄", for: .normal)
+        btnOutDay.backgroundColor = UIColor(red: 173/255, green: 216/255, blue: 230/255, alpha: 1.0) // 淡藍色
+        btnOutDay.layer.cornerRadius = 5
+        btnOutDay.addTarget(self, action: #selector(exportDayButtonTapped), for: .touchUpInside)
+    }
+    
+    // 匯出人員資料按鈕點擊事件
+    @objc private func exportPeopleButtonTapped() {
+        exportPeopleData()
+    }
+    
+    // 匯出簽到記錄按鈕點擊事件
+    @objc private func exportDayButtonTapped() {
+        exportCheckInRecords()
+    }
+    
+    // 匯出人員資料為CSV
+    private func exportPeopleData() {
+        let realm = try! Realm()
+        let allUsers = realm.objects(User.self).sorted(byKeyPath: "createdAt", ascending: false)
+        
+        // 準備匯出資料
+        var exportData: [[String]] = []
+        exportData.append(["使用者ID", "姓名", "註冊時間", "活動狀態", "最後簽到時間"]) // 表頭
+        
+        for user in allUsers {
+            let lastCheckInTime = user.lastCheckInTime != nil ? formatDate(user.lastCheckInTime!) : "未簽到"
+            let activeStatus = user.active ? "活動中" : "已停用"
+            
+            exportData.append([
+                user.userId,
+                user.Name,
+                formatDate(user.createdAt),
+                activeStatus,
+                lastCheckInTime
+            ])
+        }
+        
+        // 轉換為 CSV 格式字串
+        let csvString = exportData.map { row in
+            return row.map { cell in
+                // 如果單元格包含逗號，使用引號包圍
+                if cell.contains(",") {
+                    return "\"\(cell)\""
+                }
+                return cell
+            }.joined(separator: ",")
+        }.joined(separator: "\n")
+        
+        // 建立檔案並寫入資料
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+        let dateString = dateFormatter.string(from: Date())
+        let fileName = "人員資料_\(dateString).csv"
+        
+        // 使用文件管理器獲取Documents目錄路徑
+        if let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let fileURL = documentsPath.appendingPathComponent(fileName)
+            
+            do {
+                try csvString.write(to: fileURL, atomically: true, encoding: .utf8)
+                showShareSheet(fileURL: fileURL)
+            } catch {
+                showErrorAlert(message: "匯出失敗：\(error.localizedDescription)")
+            }
+        } else {
+            showErrorAlert(message: "無法獲取檔案保存位置")
+        }
+    }
+    
+    // 匯出簽到記錄為CSV
+    private func exportCheckInRecords() {
+        let realm = try! Realm()
+        let allRecords = realm.objects(CheckInRecord.self).sorted(byKeyPath: "checkInTime", ascending: false)
+        
+        // 準備匯出資料
+        var exportData: [[String]] = []
+        exportData.append(["使用者ID", "姓名", "簽到時間", "備註"]) // 表頭
+        
+        for record in allRecords {
+            // 從關聯中獲取使用者資訊
+            let userId: String
+            let userName: String
+            
+            if let user = record.user.first {
+                userId = user.userId
+                userName = user.Name
+            } else {
+                userId = "未知"
+                userName = "未知使用者"
+            }
+            
+            exportData.append([
+                userId,
+                userName,
+                formatDate(record.checkInTime),
+                record.note ?? ""
+            ])
+        }
+        
+        // 轉換為 CSV 格式字串
+        let csvString = exportData.map { row in
+            return row.map { cell in
+                // 如果單元格包含逗號，使用引號包圍
+                if cell.contains(",") {
+                    return "\"\(cell)\""
+                }
+                return cell
+            }.joined(separator: ",")
+        }.joined(separator: "\n")
+        
+        // 建立檔案並寫入資料
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+        let dateString = dateFormatter.string(from: Date())
+        let fileName = "簽到記錄_\(dateString).csv"
+        
+        // 使用文件管理器獲取Documents目錄路徑
+        if let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let fileURL = documentsPath.appendingPathComponent(fileName)
+            
+            do {
+                try csvString.write(to: fileURL, atomically: true, encoding: .utf8)
+                showShareSheet(fileURL: fileURL)
+            } catch {
+                showErrorAlert(message: "匯出失敗：\(error.localizedDescription)")
+            }
+        } else {
+            showErrorAlert(message: "無法獲取檔案保存位置")
+        }
+    }
+    
+    // 顯示分享選項
+    private func showShareSheet(fileURL: URL) {
+        let activityViewController = UIActivityViewController(
+            activityItems: [fileURL],
+            applicationActivities: nil
+        )
+        
+        // 如果是iPad，需要設置彈出控制器的源視圖
+        if let popoverController = activityViewController.popoverPresentationController {
+            popoverController.sourceView = self.view
+            popoverController.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 0, height: 0)
+            popoverController.permittedArrowDirections = []
+        }
+        
+        present(activityViewController, animated: true) {
+            self.showSuccessAlert(message: "檔案已準備好，請選擇分享方式或存儲位置")
+        }
     }
 }
