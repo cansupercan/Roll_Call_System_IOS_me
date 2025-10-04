@@ -431,21 +431,30 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
             let realm = try! Realm()
             
             do {
-                // 刪除該用戶的所有簽到記錄
-                let userRecords = realm.objects(CheckInRecord.self).filter("userId == %@", userToDelete.userId)
-                
                 try realm.write {
-                    // 刪除相關記錄
-                    realm.delete(userRecords)
-                    // 刪除用戶
+                    // 先獲取並刪除該用戶的所有簽到記錄
+                    // 雖然 Realm 會自動刪除關聯記錄，但明確處理可以確保所有記錄都被正確刪除
+                    let userCheckInRecords = userToDelete.checkInRecords
+                    if !userCheckInRecords.isEmpty {
+                        realm.delete(userCheckInRecords)
+                    }
+                    
+                    // 然後刪除用戶本身
                     realm.delete(userToDelete)
                 }
                 
                 // 重新加載數據
                 self.loadUsers()
                 
+                // 如果當前在簽到記錄模式，也需要更新簽到記錄列表
+                if self.currentDisplayMode == .checkInRecords {
+                    self.loadCheckInRecords()
+                    let selectedRow = self.pkvs.selectedRow(inComponent: 0)
+                    self.filterCheckInRecords(forUserIndex: selectedRow)
+                }
+                
                 // 顯示成功訊息
-                self.showSuccessAlert(message: "用戶已成功刪除")
+                self.showSuccessAlert(message: "用戶已成功刪除，相關的所有簽到記錄也已一併刪除")
             } catch {
                 self.showErrorAlert(message: "刪除失敗：\(error.localizedDescription)")
             }
@@ -459,15 +468,19 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
     
     // 刪除簽到記錄
     private func deleteCheckInRecord(at indexPath: IndexPath) {
-        guard let recordToDelete = checkInRecords?[indexPath.row] else {
+        // 根據當前模式正確獲取要刪除的記錄
+        guard let recordToDelete = filteredCheckInRecords?[indexPath.row] else {
             showErrorAlert(message: "找不到要刪除的記錄")
             return
         }
         
-        // 嘗試獲取用戶名
-        let realm = try! Realm()
-        let userObj = realm.objects(User.self).filter("id == %@", recordToDelete.id).first
-        let userName = userObj?.Name ?? "未知用戶"
+        // 使用關聯式模型獲取使用者名稱
+        let userName: String
+        if let user = recordToDelete.user.first {
+            userName = user.Name
+        } else {
+            userName = "未知用戶"
+        }
         
         // 顯示確認刪除的警告框
         let alertController = UIAlertController(
@@ -481,13 +494,21 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
         let deleteAction = UIAlertAction(title: "刪除", style: .destructive) { [weak self] _ in
             guard let self = self else { return }
             
+            let realm = try! Realm()
+            
             do {
                 try realm.write {
                     realm.delete(recordToDelete)
                 }
                 
-                // 重新加載數據
+                // 重新加載數據並篩選
                 self.loadCheckInRecords()
+                
+                // 如果 PickerView 有選中特定用戶，重新應用篩選
+                if self.currentDisplayMode == .checkInRecords {
+                    let selectedRow = self.pkvs.selectedRow(inComponent: 0)
+                    self.filterCheckInRecords(forUserIndex: selectedRow)
+                }
                 
                 // 顯示成功訊息
                 self.showSuccessAlert(message: "記錄已成功刪除")
