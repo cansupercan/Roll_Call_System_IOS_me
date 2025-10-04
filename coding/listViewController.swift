@@ -10,10 +10,11 @@ import RealmSwift
 
 class listViewController: UIViewController {
 
+    // MARK: - IBOutlet
     @IBOutlet weak var tbvlist: UITableView!
-    
     @IBOutlet weak var pkvs: UIPickerView!
     
+    // MARK: - Property
     // 存儲所有使用者的陣列
     private var users: Results<User>?
     
@@ -35,6 +36,7 @@ class listViewController: UIViewController {
     // 當前顯示模式
     private var currentDisplayMode: DisplayMode = .checkInRecords
     
+    // MARK: - LifeCycle
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -66,6 +68,18 @@ class listViewController: UIViewController {
         updatePickerViewVisibility()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // 根據當前模式載入對應數據
+        if currentDisplayMode == .users {
+            loadUsers()
+        } else {
+            loadCheckInRecords()
+        }
+    }
+    
+    // MARK: - UI Settings
     // 設置導航欄
     private func setupNavigationBar() {
         title = "簽到記錄"
@@ -94,6 +108,34 @@ class listViewController: UIViewController {
         navigationItem.rightBarButtonItem = switchButton
     }
     
+    // 設置 TableView
+    private func setupTableView() {
+        tbvlist.delegate = self
+        tbvlist.dataSource = self
+        
+        // 註冊 cell
+        tbvlist.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        
+        // 設置行高
+        tbvlist.rowHeight = 60
+    }
+    
+    // 設置 PickerView
+    private func setupPickerView() {
+        // 設置代理和數據源
+        pkvs.delegate = self
+        pkvs.dataSource = self
+        
+        // 初始選擇「所有人」選項
+        pkvs.selectRow(0, inComponent: 0, animated: false)
+    }
+    
+    // 根據當前模式設置 PickerView 的可見性
+    private func updatePickerViewVisibility() {
+        pkvs.isHidden = (currentDisplayMode == .users)
+    }
+    
+    // MARK: - IBAction
     // 切換顯示模式按鈕點擊事件
     @objc private func switchModeButtonTapped() {
         // 切換顯示模式
@@ -124,28 +166,7 @@ class listViewController: UIViewController {
         title = (currentDisplayMode == .users) ? "人員列表" : "簽到記錄"
     }
     
-    // 設置 TableView
-    private func setupTableView() {
-        tbvlist.delegate = self
-        tbvlist.dataSource = self
-        
-        // 註冊 cell
-        tbvlist.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
-        
-        // 設置行高
-        tbvlist.rowHeight = 60
-    }
-    
-    // 設置 PickerView
-    private func setupPickerView() {
-        // 設置代理和數據源
-        pkvs.delegate = self
-        pkvs.dataSource = self
-        
-        // 初始選擇「所有人」選項
-        pkvs.selectRow(0, inComponent: 0, animated: false)
-    }
-    
+    // MARK: - Function
     // 載入使用者數據
     private func loadUsers() {
         let realm = try! Realm()
@@ -195,155 +216,11 @@ class listViewController: UIViewController {
         tbvlist.reloadData()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        
-        // 根據當前模式載入對應數據
-        if currentDisplayMode == .users {
-            loadUsers()
-        } else {
-            loadCheckInRecords()
-        }
-    }
-    
     // 格式化日期
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter.string(from: date)
-    }
-    
-    // 根據當前模式設置 PickerView 的可見性
-    private func updatePickerViewVisibility() {
-        pkvs.isHidden = (currentDisplayMode == .users)
-    }
-}
-
-// MARK: - UITableViewDataSource, UITableViewDelegate
-extension listViewController: UITableViewDataSource, UITableViewDelegate {
-    
-    // 返回表格有幾個區域
-    func numberOfSections(in tableView: UITableView) -> Int {
-        return 1
-    }
-    
-    // 返回每個區域有多少行
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        switch currentDisplayMode {
-        case .users:
-            return users?.count ?? 0
-        case .checkInRecords:
-            return filteredCheckInRecords?.count ?? 0
-        }
-    }
-    
-    // 返回每一行的內容
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        
-        switch currentDisplayMode {
-        case .users:
-            // 獲取對應的使用者資料
-            if let currentUser = users?[indexPath.row] {
-                // 設置基本文字
-                let statusEmoji = currentUser.active ? "🟢" : "🔴"
-                let statusText = currentUser.active ? "活動中" : "已停用"
-                cell.textLabel?.text = "\(statusEmoji) \(currentUser.Name) (\(currentUser.userId)) - \(statusText)"
-                
-                // 設置文字顏色，根據活動狀態
-                cell.textLabel?.textColor = currentUser.active ? .black : .gray
-                
-                // 設置背景色，讓區分更明顯
-                cell.backgroundColor = currentUser.active ? .white : UIColor(white: 0.95, alpha: 1.0)
-                
-                // 添加詳細文字
-                cell.detailTextLabel?.text = currentUser.active ? "可簽到" : "無法簽到"
-            } else {
-                cell.textLabel?.text = "未知使用者"
-                cell.textLabel?.textColor = .black
-                cell.backgroundColor = .white
-            }
-        case .checkInRecords:
-            // 獲取對應的簽到記錄
-            if let record = filteredCheckInRecords?[indexPath.row] {
-                // 使用關聯式模型獲取使用者資訊
-                if let user = record.user.first {
-                    cell.textLabel?.text = "\(user.Name) - 簽到時間: \(formatDate(record.checkInTime))"
-                    cell.textLabel?.textColor = .black
-                } else {
-                    cell.textLabel?.text = "未知用戶 - 簽到時間: \(formatDate(record.checkInTime))"
-                    cell.textLabel?.textColor = .gray
-                }
-                cell.backgroundColor = .white
-            } else {
-                cell.textLabel?.text = "未知記錄"
-                cell.backgroundColor = .white
-            }
-        }
-        
-        return cell
-    }
-    
-    // 行被選中時的處理
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-        
-        switch currentDisplayMode {
-        case .users:
-            // 獲取選中的使用者
-            guard let selectedUser = users?[indexPath.row] else { return }
-            
-            // 顯示用戶詳細資訊
-            showUserDetails(user: selectedUser)
-            
-        case .checkInRecords:
-            // 獲取選中的簽到記錄
-            guard let selectedRecord = filteredCheckInRecords?[indexPath.row] else { return }
-            
-            // 顯示記錄詳細資訊
-            showRecordDetails(record: selectedRecord)
-        }
-    }
-    
-    // 定義左滑操作
-    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        switch currentDisplayMode {
-        case .users:
-            // 獲取選中的使用者
-            guard let user = users?[indexPath.row] else { return nil }
-            
-            // 創建刪除操作
-            let deleteAction = UIContextualAction(style: .destructive, title: "刪除") { [weak self] (_, _, completionHandler) in
-                self?.deleteUser(at: indexPath)
-                completionHandler(true)
-            }
-            deleteAction.backgroundColor = .systemRed
-            
-            // 創建編輯活動狀態的操作
-            let toggleActiveTitle = user.active ? "停用" : "啟用"
-            let toggleActiveAction = UIContextualAction(style: .normal, title: toggleActiveTitle) { [weak self] (_, _, completionHandler) in
-                self?.toggleUserActiveStatus(user)
-                completionHandler(true)
-            }
-            toggleActiveAction.backgroundColor = user.active ? .systemOrange : .systemGreen
-            
-            // 創建操作配置
-            let configuration = UISwipeActionsConfiguration(actions: [deleteAction, toggleActiveAction])
-            configuration.performsFirstActionWithFullSwipe = false
-            return configuration
-            
-        case .checkInRecords:
-            // 對簽到記錄只提供刪除操作
-            let deleteAction = UIContextualAction(style: .destructive, title: "刪除") { [weak self] (_, _, completionHandler) in
-                self?.deleteCheckInRecord(at: indexPath)
-                completionHandler(true)
-            }
-            deleteAction.backgroundColor = .systemRed
-            
-            let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
-            configuration.performsFirstActionWithFullSwipe = false
-            return configuration
-        }
     }
     
     // 切換用戶活動狀態
@@ -540,7 +417,136 @@ extension listViewController: UITableViewDataSource, UITableViewDelegate {
     }
 }
 
-// MARK: - UIPickerViewDataSource, UIPickerViewDelegate
+// MARK: - Extensions
+// MARK: UITableViewDataSource, UITableViewDelegate
+extension listViewController: UITableViewDataSource, UITableViewDelegate {
+    
+    // 返回表格有幾個區域
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
+    // 返回每個區域有多少行
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        switch currentDisplayMode {
+        case .users:
+            return users?.count ?? 0
+        case .checkInRecords:
+            return filteredCheckInRecords?.count ?? 0
+        }
+    }
+    
+    // 返回每一行的內容
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+        
+        switch currentDisplayMode {
+        case .users:
+            // 獲取對應的使用者資料
+            if let currentUser = users?[indexPath.row] {
+                // 設置基本文字
+                let statusEmoji = currentUser.active ? "🟢" : "🔴"
+                let statusText = currentUser.active ? "活動中" : "已停用"
+                cell.textLabel?.text = "\(statusEmoji) \(currentUser.Name) (\(currentUser.userId)) - \(statusText)"
+                
+                // 設置文字顏色，根據活動狀態
+                cell.textLabel?.textColor = currentUser.active ? .black : .gray
+                
+                // 設置背景色，讓區分更明顯
+                cell.backgroundColor = currentUser.active ? .white : UIColor(white: 0.95, alpha: 1.0)
+                
+                // 添加詳細文字
+                cell.detailTextLabel?.text = currentUser.active ? "可簽到" : "無法簽到"
+            } else {
+                cell.textLabel?.text = "未知使用者"
+                cell.textLabel?.textColor = .black
+                cell.backgroundColor = .white
+            }
+        case .checkInRecords:
+            // 獲取對應的簽到記錄
+            if let record = filteredCheckInRecords?[indexPath.row] {
+                // 使用關聯式模型獲取使用者資訊
+                if let user = record.user.first {
+                    cell.textLabel?.text = "\(user.Name) - 簽到時間: \(formatDate(record.checkInTime))"
+                    cell.textLabel?.textColor = .black
+                } else {
+                    cell.textLabel?.text = "未知用戶 - 簽到時間: \(formatDate(record.checkInTime))"
+                    cell.textLabel?.textColor = .gray
+                }
+                cell.backgroundColor = .white
+            } else {
+                cell.textLabel?.text = "未知記錄"
+                cell.backgroundColor = .white
+            }
+        }
+        
+        return cell
+    }
+    
+    // 行被選中時的處理
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        
+        switch currentDisplayMode {
+        case .users:
+            // 獲取選中的使用者
+            guard let selectedUser = users?[indexPath.row] else { return }
+            
+            // 顯示用戶詳細資訊
+            showUserDetails(user: selectedUser)
+            
+        case .checkInRecords:
+            // 獲取選中的簽到記錄
+            guard let selectedRecord = filteredCheckInRecords?[indexPath.row] else { return }
+            
+            // 顯示記錄詳細資訊
+            showRecordDetails(record: selectedRecord)
+        }
+    }
+    
+    // 定義左滑操作
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        switch currentDisplayMode {
+        case .users:
+            // 獲取選中的使用者
+            guard let user = users?[indexPath.row] else { return nil }
+            
+            // 創建刪除操作
+            let deleteAction = UIContextualAction(style: .destructive, title: "刪除") { [weak self] (_, _, completionHandler) in
+                self?.deleteUser(at: indexPath)
+                completionHandler(true)
+            }
+            deleteAction.backgroundColor = .systemRed
+            
+            // 創建編輯活動狀態的操作
+            let toggleActiveTitle = user.active ? "停用" : "啟用"
+            let toggleActiveAction = UIContextualAction(style: .normal, title: toggleActiveTitle) { [weak self] (_, _, completionHandler) in
+                self?.toggleUserActiveStatus(user)
+                completionHandler(true)
+            }
+            toggleActiveAction.backgroundColor = user.active ? .systemOrange : .systemGreen
+            
+            // 創建操作配置
+            let configuration = UISwipeActionsConfiguration(actions: [deleteAction, toggleActiveAction])
+            configuration.performsFirstActionWithFullSwipe = false
+            return configuration
+            
+        case .checkInRecords:
+            // 對簽到記錄只提供刪除操作
+            let deleteAction = UIContextualAction(style: .destructive, title: "刪除") { [weak self] (_, _, completionHandler) in
+                self?.deleteCheckInRecord(at: indexPath)
+                completionHandler(true)
+            }
+            deleteAction.backgroundColor = .systemRed
+            
+            let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
+            configuration.performsFirstActionWithFullSwipe = false
+            return configuration
+        }
+    }
+}
+
+// MARK: UIPickerViewDataSource, UIPickerViewDelegate
 extension listViewController: UIPickerViewDataSource, UIPickerViewDelegate {
     
     // 返回 PickerView 有幾個區域

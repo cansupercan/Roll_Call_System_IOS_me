@@ -10,13 +10,13 @@ import RealmSwift
 
 class MainViewController: UIViewController {
 
+    // MARK: - IBOutlet
     @IBOutlet weak var lbtitle: UILabel!
-    
     @IBOutlet weak var tbvselect: UITableView!
-    
     @IBOutlet weak var btnOutDay: UIButton!
-    
     @IBOutlet weak var btnoutpeople: UIButton!
+    
+    // MARK: - Property
     // 存儲所有使用者的陣列
     private var users: Results<User>?
     
@@ -26,6 +26,7 @@ class MainViewController: UIViewController {
     // 添加一個標誌來記錄定時器狀態
     private var timerWasRunning = false
     
+    // MARK: - LifeCycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -53,27 +54,11 @@ class MainViewController: UIViewController {
         // 啟動定時器來更新時間
         startTimeUpdater()
     }
-    // 設置時間顯示標籤
-    private func setupTimeLabel() {
-        lbtitle.textAlignment = .center
-        lbtitle.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        loadUsers() // 每次視圖出現時重新加載數據
         updateTimeLabel() // 初始化顯示
-    }
-    
-    // 啟動定時器來更新時間
-    private func startTimeUpdater() {
-        // 每秒更新一次時間
-        timer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(updateTimeLabel), userInfo: nil, repeats: true)
-        timer?.tolerance = 0.1 // 增加容差以節省電量
-    }
-    
-    // 更新時間標籤
-    @objc private func updateTimeLabel() {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        let currentTimeString = dateFormatter.string(from: Date())
-        
-        lbtitle.text = "現在時間: \(currentTimeString)"
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -95,6 +80,14 @@ class MainViewController: UIViewController {
         
         // 無論如何都更新一次時間，確保顯示最新時間
         updateTimeLabel()
+    }
+    
+    // MARK: - UI Settings
+    // 設置時間顯示標籤
+    private func setupTimeLabel() {
+        lbtitle.textAlignment = .center
+        lbtitle.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        updateTimeLabel() // 初始化顯示
     }
     
     // 設置淡藍色導航欄
@@ -127,9 +120,74 @@ class MainViewController: UIViewController {
         navigationItem.leftBarButtonItem = addButton
     }
     
+    // 設置 TableView
+    private func setupTableView() {
+        tbvselect.delegate = self
+        tbvselect.dataSource = self
+        
+        // 註冊 cell
+        tbvselect.register(UITableViewCell.self, forCellReuseIdentifier: "UserCell")
+        
+        // 設置行高
+        tbvselect.rowHeight = 60
+    }
+    
+    // 設置匯出按鈕
+    private func setupExportButtons() {
+        // 設置人員匯出按鈕
+        btnoutpeople.setTitle("匯出人員資料", for: .normal)
+        btnoutpeople.backgroundColor = UIColor(red: 173/255, green: 216/255, blue: 230/255, alpha: 1.0) // 淡藍色
+        btnoutpeople.layer.cornerRadius = 5
+        btnoutpeople.addTarget(self, action: #selector(exportPeopleButtonTapped), for: .touchUpInside)
+        
+        // 設置簽到記錄匯出按鈕
+        btnOutDay.setTitle("匯出簽到記錄", for: .normal)
+        btnOutDay.backgroundColor = UIColor(red: 173/255, green: 216/255, blue: 230/255, alpha: 1.0) // 淡藍色
+        btnOutDay.layer.cornerRadius = 5
+        btnOutDay.addTarget(self, action: #selector(exportDayButtonTapped), for: .touchUpInside)
+    }
+    
+    // MARK: - IBAction
     // "+"按鈕點擊事件
     @objc private func addButtonTapped() {
         showAddPersonAlert()
+    }
+    
+    // 記錄按鈕點擊事件
+    @objc private func recordButtonTapped() {
+        // 未來這裡會導航到記錄頁面
+        print("記錄按鈕被點擊")
+        
+        // 這裡可以添加跳轉到記錄頁面的代碼
+        let recordVC = listViewController()
+        navigationController?.pushViewController(recordVC, animated: true)
+    }
+    
+    // 匯出人員資料按鈕點擊事件
+    @objc private func exportPeopleButtonTapped() {
+        exportPeopleData()
+    }
+    
+    // 匯出簽到記錄按鈕點擊事件
+    @objc private func exportDayButtonTapped() {
+        exportCheckInRecords()
+    }
+    
+    // MARK: - Function
+    // 啟動定時器來更新時間
+    private func startTimeUpdater() {
+        // 每秒更新一次時間
+        timer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(updateTimeLabel), userInfo: nil, repeats: true)
+        timer?.tolerance = 0.1 // 增加容差以節省電量
+    }
+    
+    // 更新時間標籤
+    @objc private func updateTimeLabel() {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        let currentTimeString = dateFormatter.string(from: Date())
+        
+        lbtitle.text = "現在時間: \(currentTimeString)"
     }
     
     // 顯示新增人員的警告框
@@ -199,118 +257,6 @@ class MainViewController: UIViewController {
         } catch {
             showErrorAlert(message: "儲存失敗: \(error.localizedDescription)")
         }
-    }
-    
-    // 顯示成功訊息
-    private func showSuccessAlert(message: String) {
-        let alertController = UIAlertController(title: "成功", message: message, preferredStyle: .alert)
-        let okAction = UIAlertAction(title: "確定", style: .default)
-        alertController.addAction(okAction)
-        present(alertController, animated: true)
-    }
-    
-    // 顯示錯誤訊息
-    private func showErrorAlert(message: String) {
-        let alertController = UIAlertController(title: "錯誤", message: message, preferredStyle: .alert)
-        let okAction = UIAlertAction(title: "確定", style: .default)
-        alertController.addAction(okAction)
-        present(alertController, animated: true)
-    }
-    
-    // 記錄按鈕點擊事件
-    @objc private func recordButtonTapped() {
-        // 未來這裡會導航到記錄頁面
-        print("記錄按鈕被點擊")
-        
-        // 這裡可以添加跳轉到記錄頁面的代碼
-         let recordVC = listViewController()
-         navigationController?.pushViewController(recordVC, animated: true)
-    }
-    
-    // 設置 TableView
-    private func setupTableView() {
-        tbvselect.delegate = self
-        tbvselect.dataSource = self
-        
-        // 註冊 cell
-        tbvselect.register(UITableViewCell.self, forCellReuseIdentifier: "UserCell")
-        
-        // 設置行高
-        tbvselect.rowHeight = 60
-    }
-    
-    // 載入使用者數據
-    private func loadUsers() {
-        let realm = try! Realm()
-        users = realm.objects(User.self).filter("active == true").sorted(byKeyPath: "createdAt", ascending: false)
-        tbvselect.reloadData()
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        loadUsers() // 每次視圖出現時重新加載數據
-        updateTimeLabel() // 初始化顯示
-    }
-}
-
-// MARK: - UITableViewDataSource, UITableViewDelegate
-extension MainViewController: UITableViewDataSource, UITableViewDelegate {
-    
-    // 返回表格有幾個區域
-    func numberOfSections(in tableView: UITableView) -> Int {
-        return 1
-    }
-    
-    // 返回每個區域有多少行
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return users?.count ?? 0
-    }
-    
-    // 返回每一行的內容
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "UserCell", for: indexPath)
-        
-        // 獲取對應的使用者資料
-        if let currentUser = users?[indexPath.row] {
-            cell.textLabel?.text = "\(currentUser.Name) (\(currentUser.userId))"
-            
-            // 檢查用戶是否在今天已經簽到
-            if let lastCheckInTime = currentUser.lastCheckInTime {
-                let calendar = Calendar.current
-                let today = calendar.startOfDay(for: Date())
-                let checkInDate = calendar.startOfDay(for: lastCheckInTime)
-                
-                // 如果是今天簽到的，顯示打勾圖示
-                if calendar.isDate(today, inSameDayAs: checkInDate) {
-                    // 使用系統自帶的打勾圖標
-                    cell.accessoryType = .checkmark
-                    cell.tintColor = .systemGreen // 使用綠色
-                } else {
-                    cell.accessoryType = .none
-                }
-            } else {
-                cell.accessoryType = .none
-            }
-        } else {
-            cell.textLabel?.text = "未知使用者"
-            cell.accessoryType = .none
-        }
-        
-        return cell
-    }
-    
-    // 行被選中時的處理
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-        
-        // 獲取選中的使用者
-        guard let selectedUser = users?[indexPath.row] else {
-            showErrorAlert(message: "無法獲取選中的使用者資料")
-            return
-        }
-        
-        // 顯示簽到確認對話框
-        showCheckInConfirmation(for: selectedUser)
     }
     
     // 顯示簽到確認對話框
@@ -388,6 +334,13 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
         }
     }
     
+    // 載入使用者數據
+    private func loadUsers() {
+        let realm = try! Realm()
+        users = realm.objects(User.self).filter("active == true").sorted(byKeyPath: "createdAt", ascending: false)
+        tbvselect.reloadData()
+    }
+    
     // 格式化日期
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -395,29 +348,20 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
         return formatter.string(from: date)
     }
     
-    // 設置匯出按鈕
-    private func setupExportButtons() {
-        // 設置人員匯出按鈕
-        btnoutpeople.setTitle("匯出人員資料", for: .normal)
-        btnoutpeople.backgroundColor = UIColor(red: 173/255, green: 216/255, blue: 230/255, alpha: 1.0) // 淡藍色
-        btnoutpeople.layer.cornerRadius = 5
-        btnoutpeople.addTarget(self, action: #selector(exportPeopleButtonTapped), for: .touchUpInside)
-        
-        // 設置簽到記錄匯出按鈕
-        btnOutDay.setTitle("匯出簽到記錄", for: .normal)
-        btnOutDay.backgroundColor = UIColor(red: 173/255, green: 216/255, blue: 230/255, alpha: 1.0) // 淡藍色
-        btnOutDay.layer.cornerRadius = 5
-        btnOutDay.addTarget(self, action: #selector(exportDayButtonTapped), for: .touchUpInside)
+    // 顯示成功訊息
+    private func showSuccessAlert(message: String) {
+        let alertController = UIAlertController(title: "成功", message: message, preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "確定", style: .default)
+        alertController.addAction(okAction)
+        present(alertController, animated: true)
     }
     
-    // 匯出人員資料按鈕點擊事件
-    @objc private func exportPeopleButtonTapped() {
-        exportPeopleData()
-    }
-    
-    // 匯出簽到記錄按鈕點擊事件
-    @objc private func exportDayButtonTapped() {
-        exportCheckInRecords()
+    // 顯示錯誤訊息
+    private func showErrorAlert(message: String) {
+        let alertController = UIAlertController(title: "錯誤", message: message, preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "確定", style: .default)
+        alertController.addAction(okAction)
+        present(alertController, animated: true)
     }
     
     // 匯出人員資料為CSV
@@ -553,5 +497,67 @@ extension MainViewController: UITableViewDataSource, UITableViewDelegate {
         present(activityViewController, animated: true) {
             self.showSuccessAlert(message: "檔案已準備好，請選擇分享方式或存儲位置")
         }
+    }
+}
+
+// MARK: - Extensions
+// MARK: UITableViewDataSource, UITableViewDelegate
+extension MainViewController: UITableViewDataSource, UITableViewDelegate {
+    
+    // 返回表格有幾個區域
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
+    // 返回每個區域有多少行
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return users?.count ?? 0
+    }
+    
+    // 返回每一行的內容
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "UserCell", for: indexPath)
+        
+        // 獲取對應的使用者資料
+        if let currentUser = users?[indexPath.row] {
+            cell.textLabel?.text = "\(currentUser.Name) (\(currentUser.userId))"
+            
+            // 檢查用戶是否在今天已經簽到
+            if let lastCheckInTime = currentUser.lastCheckInTime {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: Date())
+                let checkInDate = calendar.startOfDay(for: lastCheckInTime)
+                
+                // 如果是今天簽到的，顯示打勾圖示
+                if calendar.isDate(today, inSameDayAs: checkInDate) {
+                    // 使用系統自帶的打勾圖標
+                    cell.accessoryType = .checkmark
+                    cell.tintColor = .systemGreen // 使用綠色
+                } else {
+                    cell.accessoryType = .none
+                }
+            } else {
+                cell.accessoryType = .none
+            }
+        } else {
+            cell.textLabel?.text = "未知使用者"
+            cell.accessoryType = .none
+        }
+        
+        return cell
+    }
+    
+    // 行被選中時的處理
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        
+        // 獲取選中的使用者
+        guard let selectedUser = users?[indexPath.row] else {
+            showErrorAlert(message: "無法獲取選中的使用者資料")
+            return
+        }
+        
+        // 顯示簽到確認對話框
+        showCheckInConfirmation(for: selectedUser)
     }
 }
